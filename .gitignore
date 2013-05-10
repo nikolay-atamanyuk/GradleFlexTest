@@ -8,3 +8,4 @@ Thumbs.db
 #Ignore gradle build and tmp files/folders
 gradle-app.setting
 .gradle/
+build/
