@@ -11,6 +11,7 @@ apply plugin: 'gradlefx'
 apply plugin: 'scaffold'
 
 type = 'swf'
+mainClass='Main.as'
 
 repositories {
         add(new org.apache.ivy.plugins.resolver.URLResolver()) {
