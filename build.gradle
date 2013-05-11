@@ -20,8 +20,15 @@ repositories {
         }
 }
 
+flexUnit.command='c:/Program Files/Adobe/Flash Player/Debug/flashplayer_11_sa_debug.exe'
+def flexunitHome = 'c:/Temp/Downloads/flexunit/'  //FLEXUNIT_HOME is an environment variable referencing the FlexUnit install location
+
 dependencies {
         flexSDK group: 'org.apache', name: 'apache-flex-sdk', version: '4.9.0', ext: 'zip'
+
+	test files("${flexunitHome}/flexunit-4.1.0-8-flex_4.1.0.16076.swc",
+               "${flexunitHome}/flexUnitTasks-4.1.0-8.jar",
+               "${flexunitHome}/flexunit-cilistener-4.1.0-8-4.1.0.16076.swc")
 }
 
 sdkAutoInstall {
