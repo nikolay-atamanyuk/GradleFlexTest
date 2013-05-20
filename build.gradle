@@ -20,26 +20,28 @@ mainClass = 'Main.as'
 
 flexUnit.command = resolveFlexUnitCommand(System.getenv()['FLASH_PLAYER_EXE'])
 def flexUnitHome = resolveFlexUnitHome(System.getenv()['FLEXUNIT_HOME'])
+
 def flaDirectory = 'src/main/fla'
 def scriptsDirectory = 'src/main/scripts' 
 def flaBuildScript = 'publish.jsfl'
-def csBuildCommand = /C:\Program Files\Adobe\Adobe Flash CS6\Flash.exe/
+
+def apparatDirectory = resolveApparatHome(System.getenv()['APPARAT_HOME'])
 
 repositories {
     add(new org.apache.ivy.plugins.resolver.URLResolver()) {
         name = 'Apache'
         addArtifactPattern 'http://apache.cu.be/flex/4.9.0/binaries/apache-flex-sdk-4.9.0-bin.zip'
-    }
+    } 
 }
 
 dependencies {
-    flexSDK group: 'org.apache', name: 'apache-flex-sdk', version: '4.9.0', ext: 'zip'
+    flexSDK 'org.apache:apache-flex-sdk:4.9.0@zip'
 
     test files("${flexUnitHome}/flexunit-4.1.0-8-flex_4.1.0.16076.swc",
             "${flexUnitHome}/flexUnitTasks-4.1.0-8.jar",
             "${flexUnitHome}/flexunit-cilistener-4.1.0-8-4.1.0.16076.swc")
-              
-    merged files("${libsDir}") 
+         
+    merged files("${libsDir}")    
 }
 
 sdkAutoInstall {
@@ -65,6 +67,10 @@ task flaBuild << {
 
 compileFlex.dependsOn flaBuild
 
+task compress << {
+	println apparatDirectory
+}
+
 String resolveFlexUnitCommand(String flexUnitCommand){
 	if (flexUnitCommand == null) {
     	flexUnitCommand = resolveFile('debugPlayer', 'flashplayer_11_sa.exe',
@@ -75,31 +81,20 @@ String resolveFlexUnitCommand(String flexUnitCommand){
 }
 
 String resolveFlexUnitHome(String flexUnitHome){
-	if (flexUnitHome == null) {
-    	println('Resolve flexunit directory')
-
-    	String flexUnitDirectory = 'flexunit'
-    	String flexUnitDownloadUrl = 'http://flexunit.org/releases/flexunit-4.1.0-8-4.1.0.16076.zip'
-
-    	FileResolver gradleUserHomeDirectoryResolver = new BaseDirFileResolver(FileSystems.default, gradleFxUserHomeDir)
-    	File flexUnitDirectoryLocation = gradleUserHomeDirectoryResolver.resolve(flexUnitDirectory)
-
-    	FileResolver flexUnitTaskLocationResolver = new BaseDirFileResolver(FileSystems.default, flexUnitDirectoryLocation)
-    	File flexUnitTask = flexUnitTaskLocationResolver.resolve('flexUnitTasks-4.1.0-8.jar')
-
-    	if (!flexUnitTask.exists()) {
-        	File flexUnitZip = resolveFile(flexUnitDirectory, 'flexunit-4.1.0-8-4.1.0.16076.zip',
-                'http://flexunit.org/releases/flexunit-4.1.0-8-4.1.0.16076.zip')
-
-        	println('unzip file: flexunit-4.1.0-8-4.1.0.16076.zip')
-
-        	ant.unzip(src: flexUnitZip.absolutePath, dest: gradleFxUserHomeDir, overwrite: "true")
-	    }
-
-    	flexUnitHome = flexUnitDirectoryLocation.absolutePath     
+	if (flexUnitHome == null) {   
+		flexUnitHome = resolveZip('flexunit', 'flexunit-4.1.0-8-4.1.0.16076.zip', 
+			'http://flexunit.org/releases/flexunit-4.1.0-8-4.1.0.16076.zip')  
 	}     
 	
 	return flexUnitHome
+}
+
+String resolveApparatHome(String apparatHome){
+	if(apparatHome == null){
+		apparatHome = resolveZip('apparat-1.0-SNAPSHOT', 'apparat-1.0-SNAPSHOT-bin.zip', 
+			'http://apparat.googlecode.com/files/apparat-1.0-SNAPSHOT-bin.zip')  
+	}
+	return apparatHome
 }
 
 File resolveFile(String fileDirName, String fileName, String downloadUrl) {
@@ -120,5 +115,25 @@ File resolveFile(String fileDirName, String fileName, String downloadUrl) {
     }
 
     return fileLocation
-}       
+}   
+
+File resolveZip(String dirName, String zipName, String downloadUrl){
+	println("Resolve zip: ${zipName}")
+
+    FileResolver gradleUserHomeDirectoryResolver = new BaseDirFileResolver(FileSystems.default, gradleFxUserHomeDir)
+    File directoryLocation = gradleUserHomeDirectoryResolver.resolve(dirName)
+
+    FileResolver zipLocationResolver = new BaseDirFileResolver(FileSystems.default, directoryLocation)
+    File zipFile = zipLocationResolver.resolve(zipName)
+
+    if (!zipFile.exists()) {
+       	File downloadZip = resolveFile(dirName, zipName, downloadUrl)
+
+        println("unzip file: ${zipName}")
+
+       	ant.unzip(src: downloadZip, dest: gradleFxUserHomeDir, overwrite: "true")
+	}
+
+    return directoryLocation; 
+}    
 
