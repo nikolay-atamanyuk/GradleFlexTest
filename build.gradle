@@ -38,6 +38,8 @@ dependencies {
     test files("${flexUnitHome}/flexunit-4.1.0-8-flex_4.1.0.16076.swc",
             "${flexUnitHome}/flexUnitTasks-4.1.0-8.jar",
             "${flexUnitHome}/flexunit-cilistener-4.1.0-8-4.1.0.16076.swc")
+              
+    merged files("${libsDir}") 
 }
 
 sdkAutoInstall {
@@ -61,7 +63,7 @@ task flaBuild << {
    	}
 } 
 
-build.dependsOn flaBuild
+compileFlex.dependsOn flaBuild
 
 String resolveFlexUnitCommand(String flexUnitCommand){
 	if (flexUnitCommand == null) {

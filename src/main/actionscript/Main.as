@@ -1,4 +1,4 @@
-package {
+﻿package {
 import flash.display.Sprite;
 import flash.events.Event;
 
@@ -11,6 +11,8 @@ public class Main extends Sprite {
 
     private function init(e:Event = null):void {
         removeEventListener(Event.ADDED_TO_STAGE, init);
+		
+		this.addChild(new SymbolView());
     }
 }
 }
