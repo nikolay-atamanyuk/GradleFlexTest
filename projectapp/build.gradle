@@ -1,0 +1,111 @@
+import org.gradle.api.internal.file.BaseDirFileResolver
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.internal.nativeplatform.filesystem.FileSystems
+
+apply plugin: 'gradlefx'
+apply plugin: 'scaffold'
+
+type = 'swf'
+frameworkLinkage = 'none'
+mainClass = 'Main.as'
+
+def pdmDirectory = resolvePmdHome()
+
+def flaDirectory = 'src/main/fla'
+def scriptsDirectory = 'src/main/scripts' 
+def flaBuildScript = 'publish.jsfl'
+
+dependencies {
+	flexSDK 'org.apache:apache-flex-sdk:4.9.0@zip'
+	  
+    merged project(':projectlib') 
+    merged files("${libsDir}")
+}
+
+sdkAutoInstall {
+    showPrompts = false
+}
+
+task flaBuild << { 
+    copy {
+    	from "${scriptsDirectory}/${flaBuildScript}"
+        into buildDir
+   	}                                               
+   	
+   	File finalFlaBuildScript = file("${buildDir}/${flaBuildScript}")     
+   	File flaDirectoryPath = file(flaDirectory)     
+   	String publishCall=/publishFlasWin("${flaDirectoryPath}\", "${libsDir}\", "${buildDir}\reports\");/.replace('\\', '\\\\')         
+   	finalFlaBuildScript.append(publishCall)    
+   	   	  	                                                                                               
+   	ant.exec(executable:"cmd"){
+   		arg(value:"/c")
+   		arg(value:/"${finalFlaBuildScript}"/)
+   	}
+} 
+
+task flexpmd << {
+	
+	File sourceDir = file("${srcDirs[0]}")  
+	println sourceDir 
+	
+	ant.taskdef(name:'flexPmd', classname:'com.adobe.ac.pmd.ant.FlexPmdAntTask') {
+        classpath {
+        	fileset(dir: pdmDirectory, includes: '*.jar')
+        }
+    }                                
+     
+    ant.flexPmd(sourceDirectory:"${sourceDir}", outputDirectory:"${buildDir}/reports")
+}
+
+compileFlex.dependsOn flaBuild, flexpmd
+
+String resolvePmdHome(String pmdHome){
+	if(pmdHome == null){
+		pmdHome = resolveZip('flexpmd', 'flex-pmd-ant-task-1.2.zip', 
+			'http://opensource.adobe.com/svn/opensource/flexpmd/maven-repository/release/com/adobe/ac/flex-pmd/1.2/flex-pmd-ant-task-1.2.zip', false)  
+	}
+	return pmdHome
+}
+
+File resolveFile(String fileDirName, String fileName, String downloadUrl) {
+	println("Resolve file: ${fileName}")
+
+    FileResolver gradleUserHomeDirectoryResolver = new BaseDirFileResolver(FileSystems.default, gradleFxUserHomeDir)
+    File fileDirectoryLocation = gradleUserHomeDirectoryResolver.resolve(fileDirName)
+
+    FileResolver fileLocationResolver = new BaseDirFileResolver(FileSystems.default, fileDirectoryLocation)
+    File fileLocation = fileLocationResolver.resolve(fileName)
+
+    if (!fileLocation.exists()) {
+        println("Download file from url: ${downloadUrl}")
+
+        fileDirectoryLocation.mkdirs()
+        fileLocation.createNewFile()
+        fileLocation.withOutputStream { out -> out << new URL(downloadUrl).openStream() }
+    }
+
+    return fileLocation
+}   
+
+File resolveZip(String dirName, String zipName, String downloadUrl, Boolean rootDestinatin){
+	println("Resolve zip: ${zipName}")
+
+    FileResolver gradleUserHomeDirectoryResolver = new BaseDirFileResolver(FileSystems.default, gradleFxUserHomeDir)
+    File directoryLocation = gradleUserHomeDirectoryResolver.resolve(dirName)
+
+    FileResolver zipLocationResolver = new BaseDirFileResolver(FileSystems.default, directoryLocation)
+    File zipFile = zipLocationResolver.resolve(zipName)
+
+    if (!zipFile.exists()) {
+       	File downloadZip = resolveFile(dirName, zipName, downloadUrl)
+
+        println("unzip file: ${zipName}")
+		
+		if(rootDestinatin)
+       		ant.unzip(src: downloadZip, dest: gradleFxUserHomeDir, overwrite: "true")
+       	else                                                                         
+       		ant.unzip(src: downloadZip, dest: directoryLocation, overwrite: "true")
+	}
+
+    return directoryLocation; 
+}   

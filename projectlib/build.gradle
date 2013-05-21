@@ -1,0 +1,113 @@
+import org.gradle.api.internal.file.BaseDirFileResolver
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.internal.nativeplatform.filesystem.FileSystems
+
+apply plugin: 'gradlefx'
+apply plugin: 'scaffold'
+
+type = 'swc'
+frameworkLinkage = 'none'
+
+flexUnit.command = resolveFlexUnitCommand(System.getenv()['FLASH_PLAYER_EXE'])
+def flexUnitHome = resolveFlexUnitHome(System.getenv()['FLEXUNIT_HOME'])
+
+def pdmDirectory = resolvePmdHome()
+
+dependencies {
+	flexSDK 'org.apache:apache-flex-sdk:4.9.0@zip'
+	
+    test files("${flexUnitHome}/flexunit-4.1.0-8-flex_4.1.0.16076.swc",
+            "${flexUnitHome}/flexUnitTasks-4.1.0-8.jar",
+            "${flexUnitHome}/flexunit-cilistener-4.1.0-8-4.1.0.16076.swc")
+}
+
+sdkAutoInstall {
+    showPrompts = false
+}
+
+task flexpmd << {
+	
+	File sourceDir = file("${srcDirs[0]}")  
+	println sourceDir 
+	
+	ant.taskdef(name:'flexPmd', classname:'com.adobe.ac.pmd.ant.FlexPmdAntTask') {
+        classpath {
+        	fileset(dir: pdmDirectory, includes: '*.jar')
+        }
+    }                                
+     
+    ant.flexPmd(sourceDirectory:"${sourceDir}", outputDirectory:"${buildDir}/reports")
+     
+}
+
+compileFlex.dependsOn flexpmd
+
+String resolveFlexUnitCommand(String flexUnitCommand){
+	if (flexUnitCommand == null) {
+    	flexUnitCommand = resolveFile('debugPlayer', 'flashplayer_11_sa.exe',
+            'http://download.macromedia.com/pub/flashplayer/updaters/11/flashplayer_11_sa.exe')            
+	}                                                                                               
+	
+	return flexUnitCommand
+}
+
+String resolveFlexUnitHome(String flexUnitHome){
+	if (flexUnitHome == null) {   
+		flexUnitHome = resolveZip('flexunit', 'flexunit-4.1.0-8-4.1.0.16076.zip', 
+			'http://flexunit.org/releases/flexunit-4.1.0-8-4.1.0.16076.zip', true)  
+	}     
+	
+	return flexUnitHome
+}
+
+String resolvePmdHome(String pmdHome){
+	if(pmdHome == null){
+		pmdHome = resolveZip('flexpmd', 'flex-pmd-ant-task-1.2.zip', 
+			'http://opensource.adobe.com/svn/opensource/flexpmd/maven-repository/release/com/adobe/ac/flex-pmd/1.2/flex-pmd-ant-task-1.2.zip', false)  
+	}   
+	
+	return pmdHome
+}
+
+File resolveFile(String fileDirName, String fileName, String downloadUrl) {
+	println("Resolve file: ${fileName}")
+
+    FileResolver gradleUserHomeDirectoryResolver = new BaseDirFileResolver(FileSystems.default, gradleFxUserHomeDir)
+    File fileDirectoryLocation = gradleUserHomeDirectoryResolver.resolve(fileDirName)
+
+    FileResolver fileLocationResolver = new BaseDirFileResolver(FileSystems.default, fileDirectoryLocation)
+    File fileLocation = fileLocationResolver.resolve(fileName)
+
+    if (!fileLocation.exists()) {
+        println("Download file from url: ${downloadUrl}")
+
+        fileDirectoryLocation.mkdirs()
+        fileLocation.createNewFile()
+        fileLocation.withOutputStream { out -> out << new URL(downloadUrl).openStream() }
+    }
+
+    return fileLocation
+}   
+
+File resolveZip(String dirName, String zipName, String downloadUrl, Boolean rootDestinatin){
+	println("Resolve zip: ${zipName}")
+
+    FileResolver gradleUserHomeDirectoryResolver = new BaseDirFileResolver(FileSystems.default, gradleFxUserHomeDir)
+    File directoryLocation = gradleUserHomeDirectoryResolver.resolve(dirName)
+
+    FileResolver zipLocationResolver = new BaseDirFileResolver(FileSystems.default, directoryLocation)
+    File zipFile = zipLocationResolver.resolve(zipName)
+
+    if (!zipFile.exists()) {
+       	File downloadZip = resolveFile(dirName, zipName, downloadUrl)
+
+        println("unzip file: ${zipName}")
+		
+		if(rootDestinatin)
+       		ant.unzip(src: downloadZip, dest: gradleFxUserHomeDir, overwrite: "true")
+       	else                                                                         
+       		ant.unzip(src: downloadZip, dest: directoryLocation, overwrite: "true")
+	}
+
+    return directoryLocation; 
+}    

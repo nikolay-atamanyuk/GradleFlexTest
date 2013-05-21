@@ -10,7 +10,9 @@ public class Main extends Sprite {
     }
 
     private function init(e:Event = null):void {
-        removeEventListener(Event.ADDED_TO_STAGE, init);
+        removeEventListener(Event.ADDED_TO_STAGE, init);  
+        
+        var simpleClass:SimpleClass=new SimpleClass();
 		
 		this.addChild(new SymbolView());
     }
